@@ -7,6 +7,7 @@ struct Vocabulary {
     reverse: HashMap<usize, String>,
     len: usize,
     cap: usize,
+    token_size: usize,
 }
 
 impl Vocabulary {
@@ -17,7 +18,8 @@ impl Vocabulary {
             symbols: sym,
             reverse: reverse_sym,
             len: 0,
-            cap: 50,
+            cap: 500,
+            token_size: 8,
         }
     }
 
@@ -69,7 +71,6 @@ fn main() {
 }
 
 fn bpe(buf: &Vec<usize>, vocab: &mut Vocabulary) -> Vec<usize> {
-    println!("{:?}", buf);
     if vocab.len == vocab.cap {
         return buf.clone();
     }
@@ -94,6 +95,7 @@ fn bpe(buf: &Vec<usize>, vocab: &mut Vocabulary) -> Vec<usize> {
             skip_flag = false;
             continue;
         }
+
         let left_id = buf.get(i).unwrap();
         let right_id = buf.get(i + 1).unwrap();
         let pair_string = format!(
@@ -102,10 +104,13 @@ fn bpe(buf: &Vec<usize>, vocab: &mut Vocabulary) -> Vec<usize> {
             vocab.get_reverse(right_id)
         );
         let pair = (*left_id, *right_id);
+
         if pair == most_freq_pair.0 {
-            vocab.insert(pair_string.clone());
-            new_buf.push(*vocab.get(&pair_string));
-            skip_flag = true;
+            if pair_string.chars().count() < vocab.token_size {
+                vocab.insert(pair_string.clone());
+                new_buf.push(*vocab.get(&pair_string));
+                skip_flag = true;
+            }
         } else {
             new_buf.push(*left_id);
             if i == buf.len() - 2 {
